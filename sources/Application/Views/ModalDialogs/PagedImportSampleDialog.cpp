@@ -67,37 +67,47 @@ void PagedImportSampleDialog::DrawView() {
 };
 
 void PagedImportSampleDialog::warpToNextSample(int direction) {
-  currentSample_ += direction;
+  int b_currentSample_ = currentSample_ + direction;
   int size = currentDir_->size();
   bool needPage = false;
+  int b_topIndex_ = topIndex_;
+
 
   // wrap around from first entry to last entry
-  if (currentSample_ < 0) {
-    topIndex_ = (size / PAGED_PAGE_SIZE) * PAGED_PAGE_SIZE;
-    currentSample_ = size - 1; // goto last entry
+  if (b_currentSample_ < 0) {
+    b_topIndex_ = (size / PAGED_PAGE_SIZE) * PAGED_PAGE_SIZE;
+    b_currentSample_ = size - 1; // goto last entry
     needPage = true;
   }
   // wrap around from last entry to first entry
-  if (currentSample_ >= size) {
-    currentSample_ = 0;
-    topIndex_ = 0;
+  if (b_currentSample_ >= size) {
+    b_currentSample_ = 0;
+    b_topIndex_ = 0;
     needPage = true;
   }
 
   // if we have scrolled off the bottom, page the file list down if not at end
   // of the list
-  if ((currentSample_ >= (topIndex_ + PAGED_PAGE_SIZE)) &&
-      ((topIndex_ + PAGED_PAGE_SIZE) < size)) {
-    topIndex_ += PAGED_PAGE_SIZE;
+  if ((b_currentSample_ >= (b_topIndex_ + PAGED_PAGE_SIZE)) &&
+      ((b_topIndex_ + PAGED_PAGE_SIZE) < size)) {
+    b_topIndex_ += PAGED_PAGE_SIZE;
     needPage = true;
   }
 
   // if we have scrolled off the top, page the file list up if not already at
   // very top of the list
-  if (currentSample_ < topIndex_ && topIndex_ != 0) {
-    topIndex_ -= PAGED_PAGE_SIZE;
+  if (b_currentSample_ < b_topIndex_ && b_topIndex_ != 0) {
+    b_topIndex_ -= PAGED_PAGE_SIZE;
     needPage = true;
   }
+
+  //ignroe next page if sample playing , SD card freeze.
+  if (Player::GetInstance()->IsPlaying() && needPage) {
+      Player::GetInstance()->StopStreaming();
+      return;
+  }
+  currentSample_=b_currentSample_;
+  topIndex_=b_topIndex_;
 
   // need to fetch a new page of the file list of current directory
   if (needPage) {
