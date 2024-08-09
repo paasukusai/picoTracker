@@ -23,6 +23,7 @@ protected:
   void warpToNextSample(int dir);
   void import(Path &element);
   void preview(Path &element);
+  void exit();
 
 private:
   std::vector<FileListItem> fileList_{};

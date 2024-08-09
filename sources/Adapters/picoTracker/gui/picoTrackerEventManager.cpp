@@ -10,7 +10,7 @@ uint16_t picoTrackerEventManager::buttonMask_ = 0;
 
 bool picoTrackerEventManager::isRepeating_ = false;
 unsigned long picoTrackerEventManager::time_ = 0;
-unsigned int picoTrackerEventManager::keyRepeat_ = 25;
+unsigned int picoTrackerEventManager::keyRepeat_ = 100;
 unsigned int picoTrackerEventManager::keyDelay_ = 500;
 unsigned int picoTrackerEventManager::keyKill_ = 5;
 repeating_timer_t picoTrackerEventManager::timer_ = repeating_timer_t();
@@ -50,7 +50,14 @@ int picoTrackerEventManager::MainLoop() {
   int events = 0;
   while (!finished_) {
     loops++;
-    ProcessInputEvent();
+    //unti chattering
+    static int skip_counter=0;
+    skip_counter++;
+    if(skip_counter>3000){
+      ProcessInputEvent();
+      skip_counter=0;
+    }
+
     if (!queue->empty()) {
       picoTrackerEvent event(picoTrackerEventType::LAST);
       queue->pop_into(event);

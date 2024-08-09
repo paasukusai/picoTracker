@@ -16,7 +16,7 @@ void NullView::DrawView() {
   SetColor(CD_HILITE2);
 
   char buildString[80];
-  sprintf(buildString, "picoTracker build %s%s_%s", PROJECT_NUMBER,
+  sprintf(buildString, "PSYCHO TRACKER %s%s_%s", PROJECT_NUMBER,
           PROJECT_RELEASE, BUILD_COUNT);
   GUIPoint pos;
   pos._y = 22;

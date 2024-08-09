@@ -576,7 +576,7 @@ void AppWindow::Print(char *line) {
   SetColor(CD_NORMAL);
   DrawString(_statusLine, pos, props);
   char buildString[80];
-  sprintf(buildString, "picoTracker build %s%s_%s", PROJECT_NUMBER,
+  sprintf(buildString, "PSYCHO TRACKER %s%s_%s", PROJECT_NUMBER,
           PROJECT_RELEASE, BUILD_COUNT);
   pos._y = 22;
   pos._x = (32 - strlen(buildString)) / 2;

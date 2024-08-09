@@ -128,20 +128,26 @@ void PagedImportSampleDialog::OnFocus() {
 };
 
 void PagedImportSampleDialog::preview(Path &element) {
-  if (Player::GetInstance()->IsPlaying()) {
-    Player::GetInstance()->StopStreaming();
-    if (currentSample_ != previewPlayingIndex_) {
-      previewPlayingIndex_ = currentSample_;
+    if (Player::GetInstance()->IsPlaying()) {
+      Player::GetInstance()->StopStreaming();
+      if (currentSample_ != previewPlayingIndex_) {
+        previewPlayingIndex_ = currentSample_;
+        Player::GetInstance()->StartStreaming(element);
+      }
+    } else {
       Player::GetInstance()->StartStreaming(element);
+      previewPlayingIndex_ = currentSample_;
     }
-  } else {
-    Player::GetInstance()->StartStreaming(element);
-    previewPlayingIndex_ = currentSample_;
-  }
 }
 
 void PagedImportSampleDialog::import(Path &element) {
-
+  //ignroe next page if sample playing , SD card freeze.
+  if (Player::GetInstance()->IsPlaying()) {
+      Player::GetInstance()->StopStreaming();
+      return;
+  }
+  if(!element.IsFile())return;
+  //----
   SamplePool *pool = SamplePool::GetInstance();
 
 #ifdef PICOBUILD
@@ -169,6 +175,19 @@ void PagedImportSampleDialog::import(Path &element) {
   isDirty_ = true;
 };
 
+void PagedImportSampleDialog::exit(){
+    //ignroe next page if sample playing , SD card freeze.
+    if (Player::GetInstance()->IsPlaying()) {
+        Player::GetInstance()->StopStreaming();
+        return;
+    }
+    // make sure we free mem from existing currentDir instance
+    if (currentDir_ != NULL) {
+      delete currentDir_;
+    }
+    EndModal(0);
+}
+
 void PagedImportSampleDialog::ProcessButtonMask(unsigned short mask,
                                                 bool pressed) {
 
@@ -177,38 +196,20 @@ void PagedImportSampleDialog::ProcessButtonMask(unsigned short mask,
   // make sure to index into the fileList with the offset from topIndex!
   FileListItem currentItem = fileList_[currentSample_ - topIndex_];
 
-  auto fullPathStr = std::string(currentPath_.GetPath());
+  std::string fullPathStr = std::string(currentPath_.GetPath());
   fullPathStr += "/";
   fullPathStr += currentItem.name;
-  auto fullPath = Path{fullPathStr};
+  Path fullPath = Path{fullPathStr};
 
-  if (mask & EPBM_START) {
+  if (mask & EPBM_START) { // preview command
     if (mask & EPBM_L) {
       Trace::Log("PAGEDIMPORT", "SHIFT play - import");
       import(fullPath);
     } else {
-      Trace::Log("PAGEDIMPORT", "plain play preview");
-      preview(fullPath);
-    }
-  } else if ((mask & EPBM_LEFT) && (mask & EPBM_R)) {
-    // make sure we free mem from existing currentDir instance
-    if (currentDir_ != NULL) {
-      delete currentDir_;
-    }
-    EndModal(0);
-  } else if (mask & EPBM_B) {
-    if (mask & EPBM_UP)
-      warpToNextSample(-PAGED_PAGE_SIZE);
-    if (mask & EPBM_DOWN)
-      warpToNextSample(PAGED_PAGE_SIZE);
-  } else {
-    // A modifier
-    if (mask & EPBM_A) {
       if (currentItem.isDirectory) {
         if (currentItem.name == std::string("..")) {
           if (currentPath_.GetPath() == std::string(SAMPLE_LIB_PATH)) {
-            Trace::Log("PAGEDIMPORT",
-                       "already at root of samplelib nothing to do");
+            exit();
           } else {
             Path parent = currentPath_.GetParent();
             setCurrentFolder(&parent);
@@ -220,18 +221,66 @@ void PagedImportSampleDialog::ProcessButtonMask(unsigned short mask,
         }
         isDirty_ = true;
         return;
+      }else{
+        preview(fullPath);
       }
     }
-    // handle moving up and down the file list
-    if (mask & EPBM_UP) {
-      warpToNextSample(-1);
-    } else if (mask & EPBM_DOWN) {
-      warpToNextSample(1);
+  } else if ((mask & EPBM_R)) { //page command
+    //exit page
+    if (mask & EPBM_LEFT){
+      exit();
     }
+    //page jump
+    if(fullPath.IsFile() || fullPath.IsDirectory()){
+      if (mask & EPBM_UP){
+        warpToNextSample(-PAGED_PAGE_SIZE);
+      }else if (mask & EPBM_DOWN){
+        warpToNextSample(PAGED_PAGE_SIZE);
+      }
+    }
+  } else if (mask & EPBM_B) { //exit
+    if (currentPath_.GetPath() == std::string(SAMPLE_LIB_PATH)) {
+      exit();
+    }else{
+      Path parent = currentPath_.GetParent();
+      setCurrentFolder(&parent);
+      isDirty_ = true;
+      return;
+    }
+  } else if (mask & EPBM_A) {
+      if (currentItem.isDirectory) {
+        if (currentItem.name == std::string("..")) {
+          if (currentPath_.GetPath() == std::string(SAMPLE_LIB_PATH)) {
+            exit();
+          } else {
+            Path parent = currentPath_.GetParent();
+            setCurrentFolder(&parent);
+          }
+        } else {
+          auto fullName = currentDir_->getFullName(currentItem.index);
+          Path childDirPath = currentPath_.Descend(fullName);
+          setCurrentFolder(&childDirPath);
+        }
+        isDirty_ = true;
+        return;
+      }else{
+          import(fullPath);
+      }
+  } else if (mask & EPBM_UP) {
+      warpToNextSample(-1);
+  } else if (mask & EPBM_DOWN) {
+      warpToNextSample(1);
   }
 }
 
 void PagedImportSampleDialog::setCurrentFolder(Path *path) {
+  //ignroe next page if sample playing , SD card freeze.
+  if (Player::GetInstance()->IsPlaying()) {
+      Player::GetInstance()->StopStreaming();
+      return;
+  }
+  //
+
   Trace::Log("PAGEDIMPORT", "set Current Folder:%s", path->GetPath().c_str());
   Path formerPath(currentPath_);
   topIndex_ = 0;

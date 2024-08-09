@@ -122,12 +122,16 @@ void SelectProjectDialog::OnFocus() {
 void SelectProjectDialog::ProcessButtonMask(unsigned short mask, bool pressed) {
   if (!pressed)
     return;
-
-  if (mask & EPBM_B) {
-    if (mask & EPBM_UP)
-      warpToNextProject(-LIST_SIZE);
-    if (mask & EPBM_DOWN)
-      warpToNextProject(LIST_SIZE);
+  if (mask & EPBM_R) {
+    if(mask & EPBM_LEFT){
+      Path root=std::string("/");
+      setCurrentFolder(root);
+    }
+  } else if (mask & EPBM_B) {
+    //if (mask & EPBM_UP)
+    //      warpToNextProject(-LIST_SIZE);//buggy
+    //if (mask & EPBM_DOWN)
+    //      warpToNextProject(LIST_SIZE);//buggy
   } else {
 
     // A modifier
@@ -245,7 +249,7 @@ void SelectProjectDialog::setCurrentFolder(Path &path) {
 
   // get ready
   selected_ = 0;
-  currentPath_ = path;
+  currentPath_ = Path(path);
   content_.Empty();
 
   // Let's read all the directory in the root
